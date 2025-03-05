@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Roboto">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bulma/0.9.3/css/bulma.min.css">
+    <title>Medical Chatbot Interface</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='styles.css') }}">
+</head>
+
+<body>
+    <div id="chat-container">
+        <div id="sidebar">
+            <div id="sidebar-title">Medical Chatbot</div>
+            <div id="new-chat-button">+ New Chat</div>
+            <div id="chat-history"></div>
+            <button id="terminate-button" class="terminate-button">End Chat</button>
+
+        </div>
+
+        <div id="main-chat">
+            <div id="welcome-message">
+                Welcome to the Medical Chatbot. How can I assist you today?
+            </div>
+            <div id="chat-box"></div>
+            <div id="input-section">
+                <input type="text" id="user-input" placeholder="Send a message...">
+                <button id="send-button">Send</button>
+                <button id="upload-button">Upload PDF</button>
+                <input type="file" id="file-input" style="display: none;" accept="application/pdf">
+            </div>
+        </div>
+
+        <!-- Add a Terminate/Logout button in the interface -->
+        
+
+        <script>
+            // JavaScript to handle the termination button click
+            document.getElementById('terminate-button').addEventListener('click', function() {
+                fetch('/shutdown', { method: 'POST' })
+                    .then(response => response.text())
+                    .then(data => {
+                        alert(data);  // Show an alert that the server is shutting down
+                        window.close();  // Close the current window (optional)
+                    })
+                    .catch(error => console.error('Error shutting down:', error));
+            });
+        </script>
+        <!-- Termination button code ends here -->
+    </div>
+
+    <script>
+        const chatHistory = document.getElementById("chat-history");
+        const chatBox = document.getElementById("chat-box");
+        const userInput = document.getElementById("user-input");
+        const sendButton = document.getElementById("send-button");
+        const uploadButton = document.getElementById("upload-button");
+        const fileInput = document.getElementById("file-input");
+        const newChatButton = document.getElementById("new-chat-button");
+        const welcomeMessage = document.getElementById("welcome-message");
+
+        sendButton.addEventListener("click", () => {
+            const message = userInput.value;
+            if (message.trim() === "") return;
+            displayUserMessage(message);
+            getChatbotResponse(message);
+
+            userInput.value = "";
+        });
+
+        userInput.addEventListener("keypress", (e) => {
+            if (e.key === "Enter") {
+                sendButton.click();
+            }
+        });
+
+        newChatButton.addEventListener("click", () => {
+            chatBox.innerHTML = "";
+            chatBox.style.display = "none";
+            welcomeMessage.style.display = "block";
+        });
+
+        uploadButton.addEventListener("click", () => {
+            fileInput.click();
+        });
+
+        fileInput.addEventListener("change", () => {
+            const file = fileInput.files[0];
+            if (file) {
+                uploadMedicalReport(file);
+            }
+        });
+
+        function displayUserMessage(message) {
+            const userMessageDiv = document.createElement("div");
+            userMessageDiv.className = "user-message-container";
+            userMessageDiv.innerHTML = `<div class="user-message">${message}</div><i class="fas fa-user-circle user-icon"></i>`;
+            chatBox.appendChild(userMessageDiv);
+            chatBox.style.display = "block";
+            welcomeMessage.style.display = "none";
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function displayBotResponse(response) {
+            const botResponseDiv = document.createElement("div");
+            botResponseDiv.className = "bot-response-container";
+            botResponseDiv.innerHTML = `<i class="fas fa-robot bot-icon"></i><div class="bot-response">${response}</div>`;
+            chatBox.appendChild(botResponseDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function getChatbotResponse(message) {  
+            fetch("/get_response", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                },
+                body: `user_query=${encodeURIComponent(message)}`,
+            })
+                .then((response) => response.text())
+                .then((response) => {
+                    displayBotResponse(response);
+                })
+                .catch((error) => {
+                    displayBotResponse("Error communicating with chatbot.");
+                });
+        }
+
+        function uploadMedicalReport(file) {
+            const formData = new FormData();
+            formData.append("medical_report", file);
+
+            fetch("/upload_report", {
+                method: "POST",
+                body: formData,
+            })
+                .then((response) => response.text())
+                .then((response) => {
+                    displayBotResponse(response);
+                })
+                .catch((error) => {
+                    displayBotResponse("Error uploading medical report.");
+                });
+        }
+    </script>
+</body>
+
+</html>
+
+
+
+
+
